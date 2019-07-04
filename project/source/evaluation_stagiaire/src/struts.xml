@@ -1,0 +1,248 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE struts PUBLIC "-//Apache Software Foundation//DTD Struts Configuration 2.0//EN" "http://struts.apache.org/dtds/struts-2.0.dtd">
+ 
+<struts>
+	<!-- Configuration -->
+	<constant name="struts.mapper.action.prefix.enabled" value="true" />
+	
+	<package name="custom-default" abstract="true" extends="struts-default">
+		<interceptors>
+			<interceptor name="auth" class="interceptor.AuthInterceptor" />
+			<interceptor name="adminAuth" class="interceptor.AdminAuthInterceptor" />
+		
+			<!-- stack d'intercepteurs qui vérifie utilisateur authentifié -->
+			<interceptor-stack name="authenticatedStack">
+				<interceptor-ref name="auth" />
+				<interceptor-ref name="defaultStack" />
+			</interceptor-stack>
+			
+			<interceptor-stack name="adminAuthenticatedStack">
+				<interceptor-ref name="adminAuth" />
+				<interceptor-ref name="defaultStack" />
+			</interceptor-stack>
+		</interceptors>
+
+		<global-results>
+			<!-- result name="error">/jsp/error.jsp</result -->
+			<!-- erreur accès interdit -->
+			<result name="login" type="redirect">connexion</result>
+			<result name="forbidden" type="redirect">profil</result>
+		</global-results>
+	</package>
+
+
+	<!-- Package accès public : inscription, login -->
+    <package name="public" namespace="/" extends="custom-default">
+    	<default-action-ref name="unknown" />
+    	
+    	<action name="unknown" >
+            <result name="login" type="redirect">connexion</result>
+            <result name="success" type="redirect">profil</result>
+        </action>
+		
+        <action name="connexion" class="action.LoginAction" method="login">
+            <result name="success" type="redirect">profil</result>
+			<result name="login">jsp/user_authentification.jsp</result>
+        </action>
+ 
+    </package>
+    
+    <!-- Package accès connecté -->
+    <package name="restricted" namespace="/" extends="custom-default">
+    	<default-interceptor-ref name="authenticatedStack" />
+    	
+    	<action name="deconnexion" class="action.LoginAction" method="logout">
+    		<result name="success" type="redirect">connexion</result>
+    	</action>
+    	
+    	<action name="profil" class="action.UpdateUserAction">
+    		<result name="input">jsp/user_profile.jsp</result>
+    		<result name="success">jsp/user_profile.jsp</result>
+    	</action>
+    	
+    	<action name="questionnaires" class="action.ListSurveysAction">
+    		<result>jsp/survey_list.jsp</result>
+    	</action>
+    	
+    	<action name="tentative" class="action.SurveyAttemptAction">
+    		<result name="input">jsp/survey_attempt.jsp</result>
+    		<result name="success">jsp/survey_attempt.jsp</result>
+            <result name="success" type="redirectAction">
+            	<param name="actionName">evaluation</param>
+            	<param name="namespace"></param>
+            	<param name="id">${evaluation.id}</param>
+            </result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>
+    	
+    	<action name="evaluation" class="action.ConsultEvaluationAction">
+    		<result name="success">jsp/evaluation_consultation.jsp</result>
+            <result name="error" type="redirect">evaluations</result>
+    	</action>
+    	
+    	<action name="evaluations" class="action.ListEvaluationAction">
+    		<result>jsp/evaluation_list.jsp</result>
+    	</action>
+    </package>
+    
+    <!-- Package accès admin -->
+    <package name="admin" namespace="/" extends="custom-default">
+    	<default-interceptor-ref name="adminAuthenticatedStack" />
+    	
+    	<action name="utilisateurs" class="action.ListUsersAction">
+    		<result>jsp/user_list.jsp</result>
+    	</action>
+    	
+    	<action name="creer_utilisateur" class="action.RegisterAction">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">profil</param>
+            	<param name="namespace"></param>
+            	<param name="id">${user.id}</param>
+            </result>
+            <result name="input">jsp/user_registration.jsp</result>
+    	</action>
+    	
+    	<action name="creer_questionnaire" class="action.AddSurveyAction">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">questionnaires</param>
+            	<param name="namespace"></param>
+            	<param name="filter">${survey.subject}</param>
+            </result>
+            <result name="input">jsp/survey_creation.jsp</result>
+    	</action>
+    	
+    	<action name="questionnaire" class="action.UpdateSurveyAction">
+            <result name="success">jsp/survey_modification.jsp</result>
+            <result name="input">jsp/survey_modification.jsp</result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>
+    	
+    	<action name="questions" class="action.ListQuestionsAction">
+    		<result>jsp/question_list.jsp</result>
+    	</action>
+    	
+    	<action name="question" class="action.UpdateQuestionAction">
+            <result name="success">jsp/question_modification.jsp</result>
+            <result name="input">jsp/question_modification.jsp</result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>
+    	
+    	<action name="ajouter_question" class="action.AddQuestionAction" method="addQuestion">
+            <result name="input">jsp/question_creation.jsp</result>
+            <result name="success" type="redirectAction">
+            	<param name="actionName">questionnaire</param>
+            	<param name="namespace"></param>
+            	<param name="id">${id}</param>
+            </result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>	
+    	
+    	<action name="ajouter_question_existente" class="action.AddExistingQuestionAction">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">questionnaire</param>
+            	<param name="namespace"></param>
+            	<param name="id">${questionnaire}</param>
+            </result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>	
+    	
+    	
+    	<action name="nouvelle_reponse" class="action.AddQuestionAction" method="addAnswer">
+            <result name="success">jsp/question_creation.jsp</result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>
+    	
+    	<action name="monter_question" class="action.UpdateQuestionRankAction" method="up">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">questionnaire</param>
+            	<param name="namespace"></param>
+            	<param name="id">${questionnaire}</param>
+            </result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>
+    	
+    	<action name="descendre_question" class="action.UpdateQuestionRankAction" method="down">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">questionnaire</param>
+            	<param name="namespace"></param>
+            	<param name="id">${questionnaire}</param>
+            </result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>
+    	
+    	<action name="status_question" class="action.UpdateQuestionRankAction" method="status">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">questionnaire</param>
+            	<param name="namespace"></param>
+            	<param name="id">${questionnaire}</param>
+            </result>
+            <result name="error" type="redirect">questionnaires</result>
+    	</action>    
+    	
+    	<action name="monter_reponse" class="action.UpdateAnswerRankAction" method="up">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">question</param>
+            	<param name="namespace"></param>
+            	<param name="id">${question}</param>
+            </result>
+            <result name="error" type="redirect">questions</result>
+    	</action>
+    	
+    	<action name="descendre_reponse" class="action.UpdateAnswerRankAction" method="down">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">question</param>
+            	<param name="namespace"></param>
+            	<param name="id">${question}</param>
+            </result>
+            <result name="error" type="redirect">questions</result>
+    	</action>
+    	
+    	<action name="status_reponse" class="action.UpdateAnswerRankAction" method="status">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">question</param>
+            	<param name="namespace"></param>
+            	<param name="id">${question}</param>
+            </result>
+            <result name="error" type="redirect">questions</result>
+    	</action> 
+    	
+    	<action name="bonne_reponse" class="action.UpdateAnswerRankAction" method="right">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">question</param>
+            	<param name="namespace"></param>
+            	<param name="id">${question}</param>
+            </result>
+            <result name="error" type="redirect">questions</result>
+    	</action> 
+    	
+    	<action name="ajouter_reponse" class="action.AddAnswerAction">
+            <result name="input">jsp/answer_creation.jsp</result>
+            <result name="success" type="redirectAction">
+            	<param name="actionName">question</param>
+            	<param name="namespace"></param>
+            	<param name="id">${id}</param>
+            </result>
+            <result name="error" type="redirect">questions</result>
+    	</action>
+    	
+    	<action name="reponse" class="action.UpdateAnswerAction">
+            <result name="input">jsp/answer_modification.jsp</result>
+            <result name="success" type="redirectAction">
+            	<param name="actionName">question</param>
+            	<param name="namespace"></param>
+            	<param name="id">${question}</param>
+            </result>
+            <result name="error" type="redirect">questions</result>
+    	</action>
+    	
+    	<action name="creer_theme" class="action.AddThemeAction">
+            <result name="success" type="redirectAction">
+            	<param name="actionName">creer_questionnaire</param>
+            	<param name="namespace"></param>
+            	<param name="survey.themeId">${theme.id}</param>
+            </result>
+            <result name="input">jsp/theme_creation.jsp</result>
+    	</action>
+    </package>
+ 
+</struts>

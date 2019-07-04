@@ -1,0 +1,1 @@
+ALTER TABLE evaluation MODIFY score DECIMAL(5,4);

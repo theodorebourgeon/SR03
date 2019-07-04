@@ -1,0 +1,9 @@
+ALTER TABLE question DROP COLUMN status_question;
+
+ALTER TABLE order_question
+    	ADD status_question ENUM('on', 'off') DEFAULT 'on';
+
+ALTER TABLE answer DROP COLUMN status_answer;
+
+ALTER TABLE order_answer
+    	ADD status_answer ENUM('on', 'off') DEFAULT 'on';
